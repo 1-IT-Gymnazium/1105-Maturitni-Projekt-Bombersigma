@@ -20,6 +20,4 @@ ENV/
 # Build files
 build/
 dist/
-launch.spec
-AtomicBomberSigma.spec
-BomberSigma.spec
+*.spec

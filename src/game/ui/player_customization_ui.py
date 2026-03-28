@@ -201,7 +201,7 @@ class PlayerCustomizationUI:
             self._rebuild_ui()
 
     def _decrease_player_count(self):
-        if self.player_count > 1:
+        if self.player_count > 2:
             if self.editing_bind is not None and self.editing_bind[0] == self.player_count - 1:
                 self.editing_bind = None
             self.player_count -= 1

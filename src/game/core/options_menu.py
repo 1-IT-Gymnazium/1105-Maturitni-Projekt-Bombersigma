@@ -23,7 +23,7 @@ def run():
     title_font = pygame.font.SysFont(None, 72)
     section_font = pygame.font.SysFont(None, 54)
     return_button = button.Button(
-        graphics.resize_image(images["return_button"], 0.2),
+        graphics.resize_image(images["return_button"], 0.7),
         (cfg.DISPLAY_CENTER_X, cfg.DISPLAY_CENTER_Y + 260),
         return_to_main_menu,
     )
