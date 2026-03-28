@@ -81,5 +81,8 @@ def check_for_movement_input(player, game_grid):
     if not held:
         return
 
-    direction = held[-1]
-    movement.handle_movement(player, _DIRECTION_TO_VECTOR[direction], game_grid)
+    for direction in reversed(held):
+        vector = _DIRECTION_TO_VECTOR[direction]
+        if movement.can_move(player, vector, game_grid):
+            movement.handle_movement(player, vector, game_grid)
+            return

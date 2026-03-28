@@ -53,7 +53,7 @@ class Player:
         # ---- Base stats ----
         self.base_move_speed = get_base_move_speed()
         self.move_speed = self.base_move_speed
-        self.base_bomb_cooldown_ms = 3000
+        self.base_bomb_cooldown_ms = cfg.DEFAULT_BOMB_COOLDOWN
         self.bomb_cooldown_ms = cfg.DEFAULT_BOMB_COOLDOWN
 
         # Optional base for other effects (safe defaults)

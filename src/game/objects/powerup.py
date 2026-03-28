@@ -7,6 +7,7 @@ Usage examples:
     player.effects.add("speed_boost")                           # uses defaults from SPECS
     player.effects.add("speed_boost", duration_ms=8000)         # override duration
     player.effects.add("bomb_range_up", magnitude=1)            # permanent by default here
+    player.effects.add("infinite_bombs")                        # temporary 0ms bomb cooldown
 
     # Spawn a pickup on a tile:
     tile.powerup = create_powerup("speed_boost")                # uses defaults
@@ -170,11 +171,18 @@ def _recompute_bomb_range(player, instances: List[EffectInstance]):
     player.bomb_range = base + bonus
 
 def _recompute_bomb_cooldown(player, instances: List[EffectInstance]):
-    base = getattr(player, "base_bomb_cooldown_ms", 3000)
-    if not instances:
-        player.bomb_cooldown = base
+    base = getattr(player, "base_bomb_cooldown_ms", cfg.DEFAULT_BOMB_COOLDOWN)
+    effects = getattr(player, "effects", None)
+
+    if effects and effects.any_active("infinite_bombs"):
+        player.bomb_cooldown_ms = 0
         return
-    bonus = sum(i.magnitude for i in instances)
+
+    active_instances = instances
+    if effects:
+        active_instances = effects._active.get("bomb_cooldown_reduce", [])
+
+    bonus = sum(i.magnitude for i in active_instances)
     player.bomb_cooldown_ms = max(500, base - (bonus * 500))
 
 
@@ -204,6 +212,14 @@ SPECS: Dict[str, EffectSpec] = {
         max_stacks=999,
         default_duration_ms=0,           # 0 => permanent upgrade
         default_magnitude=1
+    ),
+    "infinite_bombs": EffectSpec(
+        effect_id="infinite_bombs",
+        icon_key="powerup_infinite_bombs",
+        on_recompute=_recompute_bomb_cooldown,
+        stacking=STACK_REFRESH,
+        default_duration_ms=3000,
+        default_magnitude=0,
     )
 }
 

@@ -24,7 +24,7 @@ from game.objects import powerup as powerup_module
 DEFAULT_FUSE_FRAMES = 60
 EXPLOSION_FRAMES = 30
 POWERUP_DROP_CHANCE = cfg.POWER_UP_DROP_CHANCE
-POWERUP_DROP_TABLE = ["speed_boost", "bomb_range_up", "bomb_cooldown_reduce"]
+POWERUP_DROP_TABLE = ["speed_boost", "bomb_range_up", "bomb_cooldown_reduce", "infinite_bombs"]
 
 
 class Bomb:

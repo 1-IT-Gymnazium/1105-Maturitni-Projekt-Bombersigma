@@ -37,25 +37,31 @@ class Player_hud:
         speed_icon_surface = images.get("powerup_speedboost") or _icon_bombs[8]
         bomb_range_surface = images.get("powerup_bomb_range") or _icon_bombs[8]
         bomb_cd_surface = images.get("powerup_bomb_cooldown") or _icon_bombs[8]
+        infinite_bombs_surface = images.get("powerup_infinite_bombs") or _icon_bombs[8]
 
         #Powerup icon locations
         self.speed_icon_pos = (
-            self.position[0] + self.hud_image.get_width() + 20,
+            self.position[0] + self.hud_image.get_width() + 50,
             self.position[1] + 10
         )
         self.bomb_range_pos = (
-            self.position[0] + self.hud_image.get_width() + 20,
-            self.position[1] + self.hud_image.get_height() + 10
+            self.position[0] + self.hud_image.get_width() + 50,
+            self.position[1] + self.hud_image.get_height()
         )
         self.bomb_cd_pos = (
-            self.position[0] + self.hud_image.get_width() + 110,
+            self.position[0] + self.hud_image.get_width() + 140,
             self.position[1] + 10
+        )
+        self.infinite_bombs_pos = (
+            self.position[0] + self.hud_image.get_width() + 140,
+            self.position[1] + self.hud_image.get_height()
         )
 
         #Powerup icon classes
         self._speed_icon = draining_icon(resize_image(speed_icon_surface, 1), "powerup_speedboost")
         self._range_icon = stacking_icon(resize_image(bomb_range_surface, 1), "powerup_bomb_range")
         self._cooldown_icon = stacking_icon(resize_image(bomb_cd_surface, 1), "powerup_bomb_cooldown")
+        self._infinite_bombs_icon = draining_icon(resize_image(infinite_bombs_surface, 1), "powerup_infinite_bombs")
 
     def preload_icons(self):
         """Precompute hue-shifted HUD faces to avoid runtime cost."""
@@ -125,4 +131,11 @@ class Player_hud:
             cd_stack = p.effects.stack_count("bomb_cooldown_reduce")
 
         self._cooldown_icon.draw_stack(surface, self.bomb_cd_pos, cd_stack)
+        # ---------------------------------------------------------------
+        # -------- Infinite bombs draining icon (reads from effects) --------
+        infinite_frac = 0.0
+        if hasattr(p, "effects"):
+            infinite_frac = p.effects.fraction_left("infinite_bombs")
+
+        self._infinite_bombs_icon.draw_fraction(surface, self.infinite_bombs_pos, infinite_frac)
         # ---------------------------------------------------------------
