@@ -1,4 +1,5 @@
 import pygame
+from game.assets.graphics import images
 
 # Initialize Pygame
 pygame.init()
@@ -8,7 +9,7 @@ SCREEN_INFO = pygame.display.Info()
 PHYSICAL_WIDTH = SCREEN_INFO.current_w
 PHYSICAL_HEIGHT = SCREEN_INFO.current_h
 
-# --- logical resolution ---
+# Set displaying to work on logical resolution
 LOGICAL_WIDTH = 1920
 LOGICAL_HEIGHT = 1080
 
@@ -21,8 +22,9 @@ DISPLAY = pygame.display.set_mode(
 )
 DISPLAY_CENTER_X = DISPLAY.get_width() // 2
 DISPLAY_CENTER_Y = DISPLAY.get_height() // 2
-pygame.display.set_caption("Bombersigma")
 
+WINDOW_TITLE = "Bombersigma"
+WINDOW_ICON_KEY = "icon"
 
 # Set up clock
 CLOCK = pygame.time.Clock()
@@ -60,6 +62,14 @@ SPEED_BOOST_DURATION_MS = 5000   # 5 seconds
 MASTER_VOLUME = 0.5
 SFX_VOLUME = 0.5
 MUSIC_VOLUME = 0.5
+
+
+def apply_window_branding():
+    pygame.display.set_caption(WINDOW_TITLE)
+
+    icon = images.get(WINDOW_ICON_KEY)
+    if icon is not None:
+        pygame.display.set_icon(icon)
 
 
 def refresh_grid_metrics():

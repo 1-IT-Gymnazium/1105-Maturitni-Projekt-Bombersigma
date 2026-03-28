@@ -6,6 +6,7 @@ from game.assets.settings_store import load_runtime_settings
 # One time loading of assets
 load_runtime_settings()
 initialize_images()
+cfg.apply_window_branding()
 initialize_sounds()
 
 

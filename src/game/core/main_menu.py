@@ -18,7 +18,7 @@ def run():
     quit_button_image = graphics.resize_image(images["quit_button"],0.2)
     logo_image = graphics.resize_image(images["logo"],0.8)
     version_font = pygame.font.SysFont(None, 34)
-    version_surface = version_font.render("v.0.3", True, "white")
+    version_surface = version_font.render("v.0.4", True, "white")
 
 
     def start_game():
