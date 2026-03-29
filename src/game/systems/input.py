@@ -70,6 +70,10 @@ def check_for_quit():
             return True
     return False
 
+
+def get_events():
+    return _event_list
+
 def check_for_esc():
     for event in _event_list:
        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:

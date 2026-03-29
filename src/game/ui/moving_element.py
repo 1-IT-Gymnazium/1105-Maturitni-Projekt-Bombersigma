@@ -46,6 +46,28 @@ class MovingElement:
         self.finished = False
 
 
+class MovingButton(MovingElement):
+    def __init__(self, button, start_pos, target_pos, duration_ms=600):
+        super().__init__(button.image, start_pos, target_pos, duration_ms)
+        self.button = button
+        self.button.rect.center = (round(self.pos.x), round(self.pos.y))
+
+    def update(self, dt):
+        finished = super().update(dt)
+        self.button.rect.center = (round(self.pos.x), round(self.pos.y))
+        return finished
+
+    def draw(self, surface):
+        self.button.draw(surface)
+
+    def handle_event(self, event):
+        self.button.handle_event(event)
+
+    def reset(self):
+        super().reset()
+        self.button.rect.center = (round(self.pos.x), round(self.pos.y))
+
+
 class WinnerArrow(MovingElement): #EVERYTHING IN THIS CLASS IS MADE BY CHATGPT I TAKE ZERO CREDIT
     def __init__(self, image, duration_ms=600):
         super().__init__(image, (0, 0), (0, 0), duration_ms)

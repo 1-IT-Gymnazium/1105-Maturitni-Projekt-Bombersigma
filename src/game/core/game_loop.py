@@ -1,12 +1,13 @@
 import pygame
 from concurrent.futures import ThreadPoolExecutor
 from game.assets import config as cfg
+from game.assets import graphics
 from game.assets.graphics import images, shift_hue
 from game.systems import input
 from game.objects import grid, player
 from game.systems import bomb_logic
 from game.objects import powerup as powerup_module
-from game.ui import player_hud, pause_menu, moving_element
+from game.ui import player_hud, pause_menu, moving_element, button as btn
 import random
 
 
@@ -47,6 +48,10 @@ def run():
     should_restart = False
     paused = False
     game_end = False
+    game_end_sequence_started = False
+    game_end_buttons_started = False
+    game_end_buttons_visible = False
+    game_end_text_finished_at = None
 
     def pause_game():
         nonlocal paused
@@ -65,6 +70,11 @@ def run():
         nonlocal should_quit
         should_quit = True
 
+    def restart_game():
+        nonlocal running, should_restart
+        should_restart = True
+        running = False
+
     #Pregenerate pause menu
     pm = pause_menu.Pause_menu(cfg.DISPLAY)
     
@@ -81,6 +91,34 @@ def run():
     images["shiftable_arrow"],
     600
 )
+
+    button_scale = 0.4
+    button_area_x = cfg.DISPLAY.get_width() - 200
+    button_spacing = 200
+    button_start_x = cfg.DISPLAY.get_width() + 400
+    button_y = cfg.DISPLAY_CENTER_Y + 40
+
+    play_again_button = moving_element.MovingButton(
+        btn.Button(
+            graphics.resize_image(images["again_button"], button_scale),
+            (button_start_x, button_y),
+            restart_game,
+        ),
+        (button_start_x, button_y),
+        (button_area_x, button_y),
+        600,
+    )
+    menu_button = moving_element.MovingButton(
+        btn.Button(
+            graphics.resize_image(images["menu_button"], button_scale),
+            (button_start_x, button_y + button_spacing),
+            go_back_to_menu,
+        ),
+        (button_start_x, button_y + button_spacing),
+        (button_area_x, button_y + button_spacing),
+        600,
+    )
+    game_end_buttons = [play_again_button, menu_button]
 
     #Create grid
     def build_match_grid():
@@ -146,7 +184,7 @@ def run():
         if input.check_for_quit():
             quit_game()
 
-        if input.check_for_esc():
+        if not game_end and input.check_for_esc():
             pause_game()
 
 
@@ -183,6 +221,16 @@ def run():
                     game_end = True
                 case _:
                     pass
+
+            if game_end and not game_end_sequence_started:
+                game_end_sequence_started = True
+                game_end_buttons_started = False
+                game_end_buttons_visible = False
+                game_end_text_finished_at = None
+                game_over_text.reset()
+                winner_text.reset()
+                for moving_button in game_end_buttons:
+                    moving_button.reset()
 
 
         #=RENDERING=
@@ -230,6 +278,8 @@ def run():
             bombs.clear()
 
             dt = cfg.CLOCK.get_time()
+            current_time = pygame.time.get_ticks()
+            current_events = input.get_events()
 
             finished1 = game_over_text.update(dt)
             game_over_text.draw(cfg.DISPLAY)
@@ -241,6 +291,30 @@ def run():
 
                 winner_text.update(dt)
                 winner_text.draw(cfg.DISPLAY)
+
+                if winner_text.finished and game_end_text_finished_at is None:
+                    game_end_text_finished_at = current_time
+
+                if (
+                    game_end_text_finished_at is not None
+                    and not game_end_buttons_started
+                    and current_time - game_end_text_finished_at >= 500
+                ):
+                    game_end_buttons_started = True
+
+                if game_end_buttons_started:
+                    buttons_finished = True
+                    for moving_button in game_end_buttons:
+                        buttons_finished = moving_button.update(dt) and buttons_finished
+                        moving_button.draw(cfg.DISPLAY)
+
+                    if buttons_finished:
+                        game_end_buttons_visible = True
+
+                if game_end_buttons_visible:
+                    for event in current_events:
+                        for moving_button in game_end_buttons:
+                            moving_button.handle_event(event)
 
 
 
