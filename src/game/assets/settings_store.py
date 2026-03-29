@@ -66,6 +66,8 @@ class GameplaySettings:
     power_up_drop_chance: float
     selected_map: str | None
     random_map_obstacle_chance: float
+    arena_shrink_delay_ms: int
+    arena_shrink_speed_multiplier: float
 
     @classmethod
     def from_runtime(cls):
@@ -74,6 +76,8 @@ class GameplaySettings:
             power_up_drop_chance=cfg.POWER_UP_DROP_CHANCE,
             selected_map=cfg.SELECTED_MAP,
             random_map_obstacle_chance=cfg.RANDOM_MAP_OBSTACLE_CHANCE,
+            arena_shrink_delay_ms=cfg.ARENA_SHRINK_DELAY_MS,
+            arena_shrink_speed_multiplier=cfg.ARENA_SHRINK_SPEED_MULTIPLIER,
         )
 
     @classmethod
@@ -91,6 +95,16 @@ class GameplaySettings:
                 0.0,
                 1.0,
             ),
+            arena_shrink_delay_ms=_clamp_int(
+                data.get("arena_shrink_delay_ms", cfg.ARENA_SHRINK_DELAY_MS),
+                15000,
+                900000,
+            ),
+            arena_shrink_speed_multiplier=_clamp_float(
+                data.get("arena_shrink_speed_multiplier", cfg.ARENA_SHRINK_SPEED_MULTIPLIER),
+                0.1,
+                5.0,
+            ),
         )
 
     def apply(self):
@@ -98,6 +112,8 @@ class GameplaySettings:
         cfg.POWER_UP_DROP_CHANCE = _clamp_float(self.power_up_drop_chance, 0.0, 1.0)
         cfg.SELECTED_MAP = self.selected_map
         cfg.RANDOM_MAP_OBSTACLE_CHANCE = _clamp_float(self.random_map_obstacle_chance, 0.0, 1.0)
+        cfg.ARENA_SHRINK_DELAY_MS = _clamp_int(self.arena_shrink_delay_ms, 15000, 900000)
+        cfg.ARENA_SHRINK_SPEED_MULTIPLIER = _clamp_float(self.arena_shrink_speed_multiplier, 0.1, 5.0)
 
 
 @dataclass

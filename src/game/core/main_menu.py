@@ -18,7 +18,7 @@ def run():
     quit_button_image = graphics.resize_image(images["quit_button"],0.2)
     logo_image = graphics.resize_image(images["logo"],0.8)
     version_font = pygame.font.SysFont(None, 34)
-    version_surface = version_font.render("v.0.4", True, "white")
+    version_surface = version_font.render("v.0.5", True, "white")
 
 
     def start_game():
@@ -42,7 +42,7 @@ def run():
            button.Button(quit_button_image,(cfg.DISPLAY_CENTER_X, cfg.DISPLAY_CENTER_Y + 300), quit_game),
            button.Button(logo_image,(cfg.DISPLAY_CENTER_X, cfg.DISPLAY_CENTER_Y-300),None)]
 
-    sounds.play_music("secret_music")
+    sounds.play_music("main_menu")
 
     while running:
         cfg.CLOCK.tick(cfg.FPS) # Tick at the desired framerate

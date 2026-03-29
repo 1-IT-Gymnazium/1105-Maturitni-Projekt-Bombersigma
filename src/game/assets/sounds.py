@@ -8,10 +8,12 @@ from game.assets import config as cfg
 sounds = {}
 music_tracks = {}
 channels = {}
+current_music_name = None
 
 _SOUND_VOLUME_DEFAULT = 0.5
 _MUSIC_VOLUME_DEFAULT = 1
-_SFX_CHANNELS = ("ui", "gameplay", "explosion", "footsteps", "pickup", "b_place", "death")
+_SFX_CHANNELS = ("ui", "gameplay", "explosion", "footsteps", "pickup", "b_place", "death", "warning", "shrink", "endgame")
+_MIXER_CHANNEL_COUNT = 12
 
 
 def initialize_audio():
@@ -21,6 +23,7 @@ def initialize_audio():
     """
     if pygame.mixer.get_init() is None:
         pygame.mixer.init()
+    pygame.mixer.set_num_channels(_MIXER_CHANNEL_COUNT)
 
 def _get_sounds_base_path() -> str:
     """
@@ -55,9 +58,13 @@ def initialize_sounds():
     sound_files = {
         "beep": "beep.wav",
         "bomb_place": "bomb_place.wav",
+        "cheer": "cheer.wav",
         "explosion": "explosion.wav",
         "pickup": "pickup.wav",
+        "sad_cheer": "sad_cheer.wav",
         "fuse": "fuse.wav",
+        "metal_bang": "metal_bang.wav",
+        "warning": "warning.wav",
     }
     for sound_type in ("step", "hurt"):
         for index in range(1, 7):
@@ -73,8 +80,8 @@ def initialize_sounds():
 
     # ---- music ----
     music_files = {
-        "menu_theme": "menu_theme.mp3",
-        "game_theme": "game_theme.mp3",
+        "main_menu": "main_menu.wav",
+        "game_music": "game_music.wav",
         "secret_music": "secret_music.mp3"
     }
 
@@ -93,6 +100,9 @@ def initialize_sounds():
     channels["pickup"] = pygame.mixer.Channel(4)
     channels["b_place"] = pygame.mixer.Channel(5)
     channels["death"] = pygame.mixer.Channel(6)
+    channels["warning"] = pygame.mixer.Channel(7)
+    channels["shrink"] = pygame.mixer.Channel(8)
+    channels["endgame"] = pygame.mixer.Channel(9)
     _apply_volume_settings()
 
 
@@ -147,6 +157,20 @@ def play_looping_sound(name, loops=-1):
     return channel
 
 
+def play_sound_on_free_channel(name):
+    sound = sounds.get(name)
+    if sound is None or pygame.mixer.get_init() is None:
+        return None
+
+    channel = pygame.mixer.find_channel()
+    if channel is None:
+        return None
+
+    channel.set_volume(get_effective_sfx_volume())
+    channel.play(sound)
+    return channel
+
+
 def is_channel_busy(channel):
     return channel in channels and channels[channel].get_busy()
 
@@ -170,6 +194,19 @@ def stop_sound_channel(channel):
         channels[channel].stop()
 
 
+def stop_all_sounds():
+    if pygame.mixer.get_init() is None:
+        return
+
+    for channel in channels.values():
+        channel.stop()
+
+
+def stop_sound_channels(channel_names):
+    for channel_name in channel_names:
+        stop_sound_channel(channel_name)
+
+
 def set_master_volume(volume):
     cfg.MASTER_VOLUME = _clamp_volume(volume)
     _apply_volume_settings()
@@ -185,21 +222,29 @@ def set_sfx_volume(volume):
 
 
 def play_music(name, loops=-1, fade_ms=300):
+    global current_music_name
+
     track_path = music_tracks.get(name)
     if track_path is None:
         return
 
+    if current_music_name == name and pygame.mixer.music.get_busy():
+        return
+
     try:
-        pygame.mixer.music.fadeout(fade_ms)
+        pygame.mixer.music.stop()
         pygame.mixer.music.load(track_path)
         _apply_volume_settings()
         pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
+        current_music_name = name
     except pygame.error as e:
         print(f"[SOUND ERROR] Failed to play music '{name}': {e}")
 
 
 def stop_music(fade_ms=300):
+    global current_music_name
     pygame.mixer.music.fadeout(fade_ms)
+    current_music_name = None
 
 
 def set_music_volume(volume):

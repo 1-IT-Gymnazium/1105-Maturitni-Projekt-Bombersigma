@@ -105,8 +105,13 @@ class MapSelectionUI:
             map_preview.preview_map(self.selected_map_name, pos, surface, scale)
         else:
             random_icon = graphics.images["random_map_icon"]
-            random_icon = graphics.resize_image(random_icon, (rect.w/random_icon.get_width()))
-            surface.blit(random_icon, pos)
+            random_icon_scale = min(
+                rect.w / random_icon.get_width(),
+                rect.h / random_icon.get_height(),
+            ) * 0.82
+            random_icon = graphics.resize_image(random_icon, random_icon_scale)
+            random_icon_rect = random_icon.get_rect(center=(cfg.DISPLAY_CENTER_X, cfg.DISPLAY_CENTER_Y - 20))
+            surface.blit(random_icon, random_icon_rect)
             self.random_obstacle_slider.draw(surface)
 
         for b in self.buttons:

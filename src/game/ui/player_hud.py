@@ -41,19 +41,19 @@ class Player_hud:
 
         #Powerup icon locations
         self.speed_icon_pos = (
-            self.position[0] + self.hud_image.get_width() + 50,
+            self.position[0] + self.hud_image.get_width() + 20,
             self.position[1] + 10
         )
         self.bomb_range_pos = (
-            self.position[0] + self.hud_image.get_width() + 50,
+            self.position[0] + self.hud_image.get_width() + 20,
             self.position[1] + self.hud_image.get_height()
         )
-        self.bomb_cd_pos = (
-            self.position[0] + self.hud_image.get_width() + 140,
+        self.infinite_bombs_pos = (
+            self.position[0] + self.hud_image.get_width() + 110,
             self.position[1] + 10
         )
-        self.infinite_bombs_pos = (
-            self.position[0] + self.hud_image.get_width() + 140,
+        self.bomb_cd_pos = (
+            self.position[0] + self.hud_image.get_width() + 110,
             self.position[1] + self.hud_image.get_height()
         )
 

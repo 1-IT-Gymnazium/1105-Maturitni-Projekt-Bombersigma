@@ -24,7 +24,7 @@ def run():
     section_font = pygame.font.SysFont(None, 54)
     return_button = button.Button(
         graphics.resize_image(images["return_button"], 0.7),
-        (cfg.DISPLAY_CENTER_X, cfg.DISPLAY_CENTER_Y + 260),
+        (cfg.DISPLAY_CENTER_X, cfg.DISPLAY_CENTER_Y + 460),
         return_to_main_menu,
     )
 
@@ -72,7 +72,26 @@ def run():
             100,
             label="Powerup Drop Chance",
             display_suffix="%",
-        )
+        ),
+        "time_before_endgame": settings_ui_elements.Slider(
+            (cfg.DISPLAY_CENTER_X + (cfg.DISPLAY_CENTER_X / 2), cfg.DISPLAY_CENTER_Y + 210),
+            (360, 24),
+            (cfg.ARENA_SHRINK_DELAY_MS / 1000 - 15) / (600 - 15),
+            15,
+            600,
+            label="Time Before Endgame",
+            display_suffix="s",
+        ),
+        "endgame_speed": settings_ui_elements.Slider(
+            (cfg.DISPLAY_CENTER_X + (cfg.DISPLAY_CENTER_X / 2), cfg.DISPLAY_CENTER_Y + 350),
+            (360, 24),
+            (cfg.ARENA_SHRINK_SPEED_MULTIPLIER - 0.1) / (5.0 - 0.1),
+            0.1,
+            5.0,
+            label="Endgame Speed",
+            display_suffix="x",
+            decimals=1,
+        ),
     }
 
     while in_menu:
@@ -109,6 +128,8 @@ def run():
         sounds.set_music_volume(sliders["music_volume"].get_value() / 100)
         cfg.set_grid_size(int(round(sliders["grid_size"].get_value())))
         cfg.POWER_UP_DROP_CHANCE = sliders["powerup_drop_chance"].get_value() / 100
+        cfg.ARENA_SHRINK_DELAY_MS = int(round(sliders["time_before_endgame"].get_value() * 1000))
+        cfg.ARENA_SHRINK_SPEED_MULTIPLIER = sliders["endgame_speed"].get_value()
 
         cfg.DISPLAY.fill((35, 35, 35))
         title_surface = title_font.render("Options", True, "white")

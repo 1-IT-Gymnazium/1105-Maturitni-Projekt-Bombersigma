@@ -175,8 +175,10 @@ class Bomb:
                 self._add_explosion_part(part_type, neighbour_tile)
 
                 if neighbour_tile.obstacle:
-                    neighbour_tile.obstacle = False
-                    neighbour_tile.sprite = tile_module.Tile.empty_tile_sprite
+                    if neighbour_tile.immortal:
+                        break
+
+                    neighbour_tile.set_empty()
 
                     if getattr(neighbour_tile, "powerup", None) is None:
                         if random.random() < cfg.POWER_UP_DROP_CHANCE and POWERUP_DROP_TABLE:

@@ -2,6 +2,7 @@ import pygame
 from concurrent.futures import ThreadPoolExecutor
 from game.assets import config as cfg
 from game.assets import graphics
+from game.assets import sounds
 from game.assets.graphics import images, shift_hue
 from game.systems import input
 from game.objects import grid, player
@@ -52,6 +53,14 @@ def run():
     game_end_buttons_started = False
     game_end_buttons_visible = False
     game_end_text_finished_at = None
+    round_elapsed_ms = 0
+    arena_shrink_started = False
+    endgame_banner_started = False
+    endgame_banner_started_at = None
+    endgame_banner_sliding_out = False
+    endgame_banner_warning_channel = None
+
+    sounds.play_music("game_music")
 
     def pause_game():
         nonlocal paused
@@ -75,6 +84,15 @@ def run():
         should_restart = True
         running = False
 
+    def finalize_player_elimination(player_obj):
+        if player_obj in alive_players:
+            alive_players.remove(player_obj)
+        if player_obj.state != "dead":
+            player_obj.state = "dead"
+            player_obj.update_sprite()
+            sounds.play_random_sound_type("hurt", "death")
+        player_obj.tod = pygame.time.get_ticks()
+
     #Pregenerate pause menu
     pm = pause_menu.Pause_menu(cfg.DISPLAY)
     
@@ -91,6 +109,12 @@ def run():
     images["shiftable_arrow"],
     600
 )
+    endgame_text = moving_element.MovingElement(
+        images["endgame_text"],
+        (cfg.DISPLAY_CENTER_X, -250),
+        (cfg.DISPLAY_CENTER_X, 200),
+        600,
+    )
 
     button_scale = 0.4
     button_area_x = cfg.DISPLAY.get_width() - 200
@@ -119,6 +143,110 @@ def run():
         600,
     )
     game_end_buttons = [play_again_button, menu_button]
+    arena_shrink_schedule = grid.build_shrink_schedule()
+    arena_warning_total_ms = 450
+    next_shrink_index = 0
+    next_warning_index = 0
+    active_warning_tiles = {}
+    shrink_warning_positions = set()
+
+    timer_bar_width = 260
+    timer_bar_height = 18
+    timer_bar_margin = 28
+    timer_bar_rect = pygame.Rect(
+        cfg.DISPLAY.get_width() - timer_bar_width - timer_bar_margin,
+        timer_bar_margin,
+        timer_bar_width,
+        timer_bar_height,
+    )
+
+    def apply_arena_shrink_tile(grid_pos):
+        col, row = grid_pos
+        tile = game_grid[row * cfg.GRID_WIDTH + col]
+        if tile.immortal:
+            return
+
+        if tile.bomb:
+            for active_bomb in bombs[:]:
+                if active_bomb.grid_pos == grid_pos:
+                    if getattr(active_bomb, "fuse_channel", None) is not None:
+                        active_bomb.fuse_channel.stop()
+                        active_bomb.fuse_channel = None
+                    bombs.remove(active_bomb)
+            tile.bomb = False
+
+        grid.make_tile_immortal(tile)
+        sounds.play_sound_on_free_channel("metal_bang")
+
+        for player_obj in player_list:
+            if player_obj.state != "dead" and player_obj.grid_pos == grid_pos:
+                finalize_player_elimination(player_obj)
+
+    def draw_shrink_timer_bar():
+        if cfg.ARENA_SHRINK_DELAY_MS <= 0:
+            return
+
+        remaining_ms = max(0, cfg.ARENA_SHRINK_DELAY_MS - round_elapsed_ms)
+        fill_ratio = remaining_ms / cfg.ARENA_SHRINK_DELAY_MS
+        bar_color = (0, 190, 205) if remaining_ms > 10000 else (120, 32, 32)
+
+        pygame.draw.rect(cfg.DISPLAY, (18, 18, 18), timer_bar_rect, border_radius=9)
+        if fill_ratio > 0:
+            fill_width = max(1, int(timer_bar_rect.width * fill_ratio))
+            fill_rect = pygame.Rect(timer_bar_rect.left, timer_bar_rect.top, fill_width, timer_bar_rect.height)
+            pygame.draw.rect(cfg.DISPLAY, bar_color, fill_rect, border_radius=9)
+        pygame.draw.rect(cfg.DISPLAY, (220, 220, 220), timer_bar_rect, width=2, border_radius=9)
+
+    def update_endgame_banner(dt):
+        nonlocal endgame_banner_sliding_out, endgame_banner_warning_channel
+
+        if endgame_banner_started_at is None:
+            return
+
+        banner_elapsed_ms = round_elapsed_ms - endgame_banner_started_at
+        if banner_elapsed_ms >= 3000 and not endgame_banner_sliding_out:
+            endgame_text.start_pos = pygame.Vector2(endgame_text.pos)
+            endgame_text.target_pos = pygame.Vector2(cfg.DISPLAY_CENTER_X, -250)
+            endgame_text.reset()
+            endgame_banner_sliding_out = True
+
+        if banner_elapsed_ms >= 3600 and endgame_banner_sliding_out:
+            if endgame_banner_warning_channel is not None:
+                endgame_banner_warning_channel.stop()
+                endgame_banner_warning_channel = None
+            return
+
+        endgame_text.update(dt)
+        endgame_text.draw(cfg.DISPLAY)
+
+    def update_shrink_warning_state(shrink_elapsed_ms):
+        nonlocal next_warning_index
+
+        while (
+            next_warning_index < len(arena_shrink_schedule)
+            and arena_shrink_schedule[next_warning_index][1] - arena_warning_total_ms <= shrink_elapsed_ms
+        ):
+            grid_pos, spawn_time_ms = arena_shrink_schedule[next_warning_index]
+            tile = game_grid[grid_pos[1] * cfg.GRID_WIDTH + grid_pos[0]]
+            if not tile.immortal:
+                active_warning_tiles[grid_pos] = spawn_time_ms - arena_warning_total_ms
+                sounds.play_sound_on_free_channel("warning")
+            next_warning_index += 1
+
+        visible_warning_positions = set()
+        for grid_pos, warning_start_ms in list(active_warning_tiles.items()):
+            tile = game_grid[grid_pos[1] * cfg.GRID_WIDTH + grid_pos[0]]
+            if tile.immortal:
+                active_warning_tiles.pop(grid_pos, None)
+                continue
+
+            warning_elapsed_ms = max(0, shrink_elapsed_ms - warning_start_ms)
+            if warning_elapsed_ms < arena_warning_total_ms:
+                visible_warning_positions.add(grid_pos)
+            else:
+                active_warning_tiles.pop(grid_pos, None)
+
+        return visible_warning_positions
 
     #Create grid
     def build_match_grid():
@@ -177,6 +305,7 @@ def run():
     #=====MAIN GAME LOOP======
     while running:
         cfg.CLOCK.tick(cfg.FPS)
+        dt = cfg.CLOCK.get_time()
 
         #=INPUT=
         input.update_event_queue()
@@ -190,6 +319,8 @@ def run():
 
         #=LOGIC=
         if not paused and not game_end:
+            round_elapsed_ms += dt
+
             #bombs
             killed_players_tt = bomb_logic.update_bombs(bombs, game_grid, player_list)
 
@@ -200,9 +331,34 @@ def run():
                     input.check_for_movement_input(player_list[p], game_grid)
                     bomb_logic.handle_bomb_input(player_list[p], bombs, game_grid)
                 if player_list[p] in killed_players_tt:
-                    alive_players.remove(player_list[p])
-                    player_list[p].tod = pygame.time.get_ticks()
-                    
+                    finalize_player_elimination(player_list[p])
+
+            if round_elapsed_ms >= cfg.ARENA_SHRINK_DELAY_MS:
+                arena_shrink_started = True
+
+            if not endgame_banner_started:
+                remaining_until_shrink_ms = cfg.ARENA_SHRINK_DELAY_MS - round_elapsed_ms
+                if 0 < remaining_until_shrink_ms <= 10000:
+                    endgame_banner_started = True
+                    endgame_banner_started_at = round_elapsed_ms
+                    endgame_banner_sliding_out = False
+                    endgame_text.reset()
+                    endgame_banner_warning_channel = sounds.play_looping_sound("warning")
+
+            if arena_shrink_started:
+                shrink_elapsed_ms = round_elapsed_ms - cfg.ARENA_SHRINK_DELAY_MS
+                shrink_warning_positions = update_shrink_warning_state(shrink_elapsed_ms)
+                while (
+                    next_shrink_index < len(arena_shrink_schedule)
+                    and arena_shrink_schedule[next_shrink_index][1] <= shrink_elapsed_ms
+                ):
+                    spawn_grid_pos = arena_shrink_schedule[next_shrink_index][0]
+                    active_warning_tiles.pop(spawn_grid_pos, None)
+                    shrink_warning_positions.discard(spawn_grid_pos)
+                    apply_arena_shrink_tile(spawn_grid_pos)
+                    next_shrink_index += 1
+            else:
+                shrink_warning_positions = set()
 
             #game end check
             match len(alive_players):
@@ -227,6 +383,18 @@ def run():
                 game_end_buttons_started = False
                 game_end_buttons_visible = False
                 game_end_text_finished_at = None
+                if endgame_banner_warning_channel is not None:
+                    endgame_banner_warning_channel.stop()
+                    endgame_banner_warning_channel = None
+                sounds.stop_sound_channels(("footsteps",))
+                for active_bomb in bombs:
+                    if getattr(active_bomb, "fuse_channel", None) is not None:
+                        active_bomb.fuse_channel.stop()
+                        active_bomb.fuse_channel = None
+                if match_winner is not None:
+                    sounds.play_sound("cheer", "endgame")
+                else:
+                    sounds.play_sound("sad_cheer", "endgame")
                 game_over_text.reset()
                 winner_text.reset()
                 for moving_button in game_end_buttons:
@@ -238,7 +406,9 @@ def run():
         cfg.DISPLAY.fill((35, 35, 35)) 
 
         #grid
-        grid.draw_grid(game_grid, cfg.DISPLAY) 
+        grid.draw_grid(game_grid, cfg.DISPLAY, warning_tiles=shrink_warning_positions) 
+        draw_shrink_timer_bar()
+        update_endgame_banner(dt)
 
         #players
         for p in range(cfg.LOCAL_PLAYERS): 
@@ -277,7 +447,6 @@ def run():
         if game_end:
             bombs.clear()
 
-            dt = cfg.CLOCK.get_time()
             current_time = pygame.time.get_ticks()
             current_events = input.get_events()
 
